@@ -1,0 +1,12 @@
+--index-url https://download.pytorch.org/whl/cu118
+
+torch
+torchvision
+
+diffusers
+accelerate
+pillow
+numpy
+tokenizers
+safetensors
+transformers
