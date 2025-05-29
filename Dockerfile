@@ -1,32 +1,22 @@
-FROM python:3.10-slim
+# Use a RunPod base image that includes PyTorch and CUDA 12.1
+# This saves you from installing PyTorch manually and ensures GPU compatibility.
+FROM runpod/pytorch:2.1.0-py3.10-cuda12.1.1-devel-ubuntu22.04
 
-# System dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Update pip
-RUN pip install --no-cache-dir --upgrade pip
-
-# Working directory
+# Set the working directory
 WORKDIR /app
 
-# Install PyTorch 2.7.0 with CUDA 12.6
-RUN pip install --no-cache-dir torch==2.7.0 torchvision --index-url https://download.pytorch.org/whl/cu126 \
-    && python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda)" > /app/pytorch_version.txt
-# Copy project code
-COPY . .
-
-# Install Python dependencies
+# Install the remaining Python packages for your application
+# PyTorch is already in the base image, so we don't need to install it again.
 RUN pip install --no-cache-dir \
     runpod \
     diffusers \
+    transformers \
     accelerate \
-    pillow \
-    numpy \
-    tokenizers \
-    safetensors \
-    transformers
+    Pillow
 
-# Start your app
-CMD ["python3", "rp_handler.py"]
+# Copy your handler file into the container
+# Ensure your Python file is named 'rp_handler.py' to match this line
+COPY rp_handler.py .
+
+# Command to run the handler when the pod starts
+CMD ["python3", "-u", "rp_handler.py"]
