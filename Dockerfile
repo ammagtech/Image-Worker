@@ -1,22 +1,40 @@
-# Use a RunPod base image that includes PyTorch and CUDA 12.1
-# This saves you from installing PyTorch manually and ensures GPU compatibility.
-FROM runpod/pytorch:2.1.0-py3.10-cuda12.1.1-devel-ubuntu22.04
+# Use a Python 3.10 slim image
+FROM python:3.10-slim
 
-# Set the working directory
+# System dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Update pip
+RUN pip install --no-cache-dir --upgrade pip
+
+# Working directory inside the container
 WORKDIR /app
 
-# Install the remaining Python packages for your application
-# PyTorch is already in the base image, so we don't need to install it again.
+# Install PyTorch with CUDA support
+# Using cu121 (CUDA 12.1) is generally more stable and widely supported on RunPod instances
+# For newer GPUs or if you specifically need the absolute latest, you might try cu124 or cu125/cu126 if available and verified by PyTorch.
+# As of current, cu121 is a very safe bet.
+RUN pip install --no-cache-dir torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cu121 \
+    && python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'N/A')" > /app/pytorch_version.txt
+
+# Copy project code and the handler script
+COPY . .
+
+# Install Python dependencies
+# 'xformers' is highly recommended for Stable Diffusion models for memory efficiency and speed.
+# 'safetensors' is a dependency for many Hugging Face models.
 RUN pip install --no-cache-dir \
     runpod \
     diffusers \
-    transformers \
     accelerate \
-    Pillow
+    pillow \
+    numpy \
+    tokenizers \
+    safetensors \
+    transformers \
+    xformers
 
-# Copy your handler file into the container
-# Ensure your Python file is named 'rp_handler.py' to match this line
-COPY rp_handler.py .
-
-# Command to run the handler when the pod starts
+# Start your app (RunPod will call the handler function defined in rp_handler.py)
 CMD ["python3", "-u", "rp_handler.py"]
