@@ -8,25 +8,29 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Update pip
 RUN pip install --no-cache-dir --upgrade pip
 
-# Working directory
+# Set working directory
 WORKDIR /app
 
-# Install PyTorch 2.7.0 with CUDA 12.6
-RUN pip install --no-cache-dir torch==2.7.0 torchvision --index-url https://download.pytorch.org/whl/cu126 \
-    && python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda)" > /app/pytorch_version.txt
-# Copy project code
+# Install PyTorch (CUDA 12.6)
+RUN pip install --no-cache-dir torch==2.7.0 torchvision --index-url https://download.pytorch.org/whl/cu126
+
+# Copy project files
 COPY . .
 
-# Install Python dependencies
+# Install dependencies before downloading models
 RUN pip install --no-cache-dir \
-    runpod \
     diffusers \
     accelerate \
+    safetensors \
+    transformers \
     pillow \
     numpy \
     tokenizers \
-    safetensors \
-    transformers \
-    peft==0.9.0 
-# Start your app
+    peft==0.9.0 \
+    runpod
+
+# Download models into cache
+RUN python3 download_models.py
+
+# Run handler
 CMD ["python3", "rp_handler.py"]

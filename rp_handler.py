@@ -4,7 +4,7 @@ import torch
 import io
 import base64
 
-# Global model loading (runs once per container start)
+# Load pipeline once at container startup
 print("Initializing container...")
 
 device = "cuda"
@@ -14,24 +14,23 @@ pixel_lora_id = "nerijs/pixel-art-xl"
 lora_weight = 1.0
 pixel_weight = 1.2
 
-# Load pipeline once
-print("Loading diffusion pipeline...")
+# Load pretrained model and LoRA adapters (from cache)
+print("Loading diffusion pipeline from cache...")
 pipe = DiffusionPipeline.from_pretrained(model_id, variant="fp16")
 pipe.scheduler = LCMScheduler.from_config(pipe.scheduler.config)
 
-print("Loading LoRA weights...")
+print("Applying LoRA adapters from cache...")
 pipe.load_lora_weights(lcm_lora_id, adapter_name="lora")
 pipe.load_lora_weights(pixel_lora_id, adapter_name="pixel")
 pipe.set_adapters(["lora", "pixel"], adapter_weights=[lora_weight, pixel_weight])
 
-print("Moving pipeline to device...")
 pipe.to(device=device, dtype=torch.float16)
 
-print("Pipeline ready.")
+print("Pipeline is ready.")
 
-# Handler called for each request
+# Handler called on each request
 def handler(event):
-    print("Worker Start")
+    print("Worker start")
     input_data = event.get('input', {})
     print(f"Received input: {input_data}")
 
@@ -41,18 +40,18 @@ def handler(event):
     guidance_scale = 1.5
 
     print(f"Generating image with prompt: {prompt}")
-    image = pipe(
+    result = pipe(
         prompt=prompt,
         negative_prompt=negative_prompt,
         num_inference_steps=num_inference_steps,
         guidance_scale=guidance_scale,
-    ).images[0]
+    )
+    image = result.images[0]
 
-    print("Image generated. Converting to base64...")
+    print("Encoding image to base64...")
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
-    buffer.seek(0)
-    image_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+    image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
 
     return {
         "status": "success",
@@ -65,7 +64,7 @@ def handler(event):
         "guidance_scale": guidance_scale
     }
 
-# Start serverless handler
+# Start the RunPod handler
 if __name__ == '__main__':
-    print("Starting serverless handler...")
+    print("Starting RunPod serverless handler...")
     runpod.serverless.start({'handler': handler})
