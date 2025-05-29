@@ -32,17 +32,18 @@ COPY . .
 # Download the pixel art LoRA weights from Civitai
 RUN curl -L -o pixel-art-xl.safetensors https://civitai.com/api/download/models/140134
 
-# Install Python dependencies
 RUN pip install --no-cache-dir \
     runpod \
-    diffusers \
+    diffusers[torch,transformers] \
     accelerate \
     pillow \
     numpy \
     tokenizers \
     safetensors \
     transformers \
-    xformers
+    xformers \
+    scipy
+
 
 # Command to run your handler
 CMD ["python3", "-u", "rp_handler.py"]
