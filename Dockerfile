@@ -1,7 +1,6 @@
-# Use a Python 3.10 slim image
+# Use a base image with CUDA 12.1 support
 FROM python:3.10-slim
 
-# Set environment variable to avoid Python buffering issues
 ENV PYTHONUNBUFFERED=1
 
 # Install system dependencies
@@ -20,27 +19,15 @@ RUN pip install --no-cache-dir --upgrade pip
 # Set working directory
 WORKDIR /app
 
-# Install PyTorch with CUDA 12.1 support
-RUN pip install --no-cache-dir torch==2.3.0 torchvision==0.18.0 --index-url https://download.pytorch.org/whl/cu121
+# Copy requirements and install
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Optional sanity check (logs to file inside container)
-RUN python -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda if torch.cuda.is_available() else 'N/A')" > /app/pytorch_version.txt
+# Sanity check
+RUN python -c "import torch; print('Torch:', torch.__version__, 'CUDA:', torch.version.cuda, 'Available:', torch.cuda.is_available())" > /app/pytorch_version.txt
 
-# Copy project files
+# Copy your project code
 COPY . .
 
-RUN pip install --no-cache-dir \
-    runpod \
-    diffusers[torch,transformers] \
-    accelerate \
-    pillow \
-    numpy \
-    tokenizers \
-    safetensors \
-    transformers \
-    xformers \
-    scipy
-
-
-# Command to run your handler
+# Run the handler (main script for inference)
 CMD ["python3", "-u", "rp_handler.py"]
