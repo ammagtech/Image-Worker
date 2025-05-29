@@ -21,7 +21,6 @@ def handler(event):
     pixel_weight = 1.2
 
     print(f"Prompt: {prompt}")
-    print(f"Using optimized static parameters for pixel art generation")
 
     device = "cuda"
     print(f"Using device: {device}")
