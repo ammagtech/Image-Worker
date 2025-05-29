@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir \
     numpy \
     tokenizers \
     safetensors \
-    transformers
-
+    transformers \
+    peft==0.9.0 
 # Start your app
 CMD ["python3", "rp_handler.py"]
